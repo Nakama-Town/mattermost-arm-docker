@@ -33,7 +33,7 @@ jobs:
 
       - name: Prepare tags
         run: |
-          echo TAG_VERSION=$(git describe --tag) >> $GITHUB_ENV
+          echo TAG_VERSION=${{ github.ref_name }} >> $GITHUB_ENV
 
       - name: Build and push
         uses: docker/build-push-action@v6
