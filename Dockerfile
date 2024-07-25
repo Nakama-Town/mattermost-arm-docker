@@ -1,5 +1,4 @@
-
-FROM ubuntu:jammy-20230308@sha256:67211c14fa74f070d27cc59d69a7fa9aeff8e28ea118ef3babc295a0428a6d21
+FROM ubuntu:noble-20240605@sha256:2e863c44b718727c860746568e1d54afd13b2fa71b160f5cd9058fc436217b30
 
 # Setting bash as our shell, and enabling pipefail option
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -7,13 +6,22 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 # Some ENV variables
 ENV PATH="/mattermost/bin:${PATH}"
 
+# Build Arguments
+ARG PUID=2000
+ARG PGID=2000
+ARG MATTERMOST_VERSION
+# MM_PACKAGE build arguments controls which version of mattermost to install, defaults to latest stable enterprise
+# i.e. https://releases.mattermost.com/9.7.1/mattermost-9.7.1-linux-amd64.tar.gz
+#ARG MM_PACKAGE="https://latest.mattermost.com/mattermost-enterprise-linux"
+ARG MM_PACKAGE=https://releases.mattermost.com/$MATTERMOST_VERSION/mattermost-enterprise-$MATTERMOST_VERSION-linux-arm64.tar.gz
 
 # # Install needed packages and indirect dependencies
 RUN apt-get update \
     && DEBIAN_FRONTEND=noninteractive apt-get install --no-install-recommends -y \
     ca-certificates \
     curl \
-    mime-support \
+    media-types \
+    mailcap \
     unrtf \
     wv \
     poppler-utils \
@@ -21,19 +29,10 @@ RUN apt-get update \
     tzdata \
     && rm -rf /var/lib/apt/lists/*
 
-# Build Arguments
-ARG PUID=2000
-ARG PGID=2000
-ARG MATTERMOST_VERSION
-# MM_PACKAGE build arguments controls which version of mattermost to install, defaults to latest stable enterprise
-# i.e. https://releases.mattermost.com/9.7.1/mattermost-9.7.1-linux-amd64.tar.gz
-ARG MM_PACKAGE=https://releases.mattermost.com/$MATTERMOST_VERSION/mattermost-enterprise-$MATTERMOST_VERSION-linux-arm64.tar.gz
-#ARG MM_PACKAGE="https://latest.mattermost.com/mattermost-enterprise-linux"
-
 # Set mattermost group/user and download Mattermost
 RUN mkdir -p /mattermost/data /mattermost/plugins /mattermost/client/plugins \
-    && addgroup -gid ${PGID} mattermost \
-    && adduser -q --disabled-password --uid ${PUID} --gid ${PGID} --gecos "" --home /mattermost mattermost \
+    && groupadd --gid ${PGID} mattermost \
+    && useradd --uid ${PUID} --gid ${PGID} --comment "" --home-dir /mattermost mattermost \
     && curl -L $MM_PACKAGE | tar -xvz \
     && chown -R mattermost:mattermost /mattermost /mattermost/data /mattermost/plugins /mattermost/client/plugins
 
